@@ -67,10 +67,10 @@ def get_data_5v(num_in, data_type, data_str, label_num, HPZO_label):
     train_data = bf.get_date_tensor(train_data, label_num)
     test_data = bf.get_date_tensor(test_data, label_num)
 
-    channel_indices = [9, 20, 26, 28, 4, 6]
+    # channel_indices = [9, 20, 26, 28, 4, 6]
     # # 按索引提取通道
-    train_data[2] = train_data[2][:, channel_indices, :]
-    test_data[2] = test_data[2][:, channel_indices, :]
+    # train_data[2] = train_data[2][:, channel_indices, :]
+    # test_data[2] = test_data[2][:, channel_indices, :]
 
     data_mean = train_data[2].mean(dim=(0, 2), keepdim=True)
     data_std = train_data[2].std(dim=(0, 2), keepdim=True)
@@ -94,7 +94,7 @@ def get_data_5v_v2(num_in, data_type, data_str, label_num, HPZO_label, wavelet='
     train_data = []
     test_data = []
     for i in range(1, 6):
-        path = f".\MultiClassGaitFC_v2\datasets\eeg_data/CV_Fold_{data_type}{data_str}/eeg_data_cv_f{i}_{''.join(HPZO_label)}.pkl"
+        path = f".\PD_EEG_v2\datasets\eeg_data/CV_Fold_{data_type}{data_str}/eeg_data_cv_f{i}_{''.join(HPZO_label)}.pkl"
         data = joblib.load(path)
 
         if i == num_in:
@@ -111,7 +111,7 @@ def get_data_5v_v2(num_in, data_type, data_str, label_num, HPZO_label, wavelet='
     train_data[2] = (train_data[2] - data_mean) / data_std
     test_data[2] = (test_data[2] - data_mean) / data_std
 
-    norm_path = f".\MultiClassGaitFC_v2\datasets\eeg_data/CV_Fold_{data_type}{data_str}/eeg_cv_{num_in}_normalization_params.pt"
+    norm_path = f".\PD_EEG_v2\datasets\eeg_data/CV_Fold_{data_type}{data_str}/eeg_cv_{num_in}_normalization_params.pt"
     torch.save({'data_mean': data_mean, 'data_std': data_std}, norm_path)
 
     def to_wavelet_domain(x, wave='db4'):
@@ -173,9 +173,9 @@ def train_func(model_in, num_5v, HPZO_label, data_type, data_str, model_save_pat
         # criterion = nn.MSELoss().to(device)
         criterion = bf.ZeroTolerantMSELoss().to(device)
     else:
-        criterion = nn.CrossEntropyLoss(weight=w, label_smoothing=0.0).to(device)
+        criterion = nn.CrossEntropyLoss(weight=w, label_smoothing=0.1).to(device)
+        # criterion = FocalLoss(weight=w.to(device), gamma=2).to(device)
 
-    # criterion = FocalLoss(weight=w.to(device), gamma=2).to(device)
     optimizer = optim.AdamW(model_in.parameters(), lr=lr, weight_decay=0.001)  # weight_decay=0.001
     scheduler = bf.lr_change(optimizer, epoch_num, lr)
 
@@ -305,14 +305,12 @@ def train_and_save_all(model, HPZO_label, batch_size, epoch, learn_rate, data_ty
 
 
 if __name__ == "__main__":
-    # SingleClassifier(in_dim=39 * 2 * 175, out_dim=5)
-
     train_and_save_all(
         model=mn.MDFNet(n_channels=32, shape_T=20, n_classes=2),
         HPZO_label=["H", "P"],
-        batch_size=128,
+        batch_size=512,
         epoch=500,
-        learn_rate=0.0001,
+        learn_rate=0.00001,
         data_type="S_",
         data_str="d1",
         train=True,
@@ -321,5 +319,6 @@ if __name__ == "__main__":
         model_save_dir="./model_save/eeg_model",
         cv_folds=5,
     )
+
 
 
